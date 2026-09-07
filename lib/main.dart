@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -26,18 +24,6 @@ class ToolProduct {
     required this.imageUrl,
     required this.specs,
   });
-
-  factory ToolProduct.fromJson(Map<String, dynamic> json) {
-    return ToolProduct(
-      id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Tool Item',
-      brand: json['brand']?.toString() ?? 'General',
-      category: json['category']?.toString() ?? 'Tools',
-      price: int.tryParse(json['price']?.toString() ?? '0') ?? 0,
-      imageUrl: json['imageUrl']?.toString() ?? '',
-      specs: json['specs']?.toString() ?? '',
-    );
-  }
 }
 
 // Fallback products agar internet na ho
@@ -188,38 +174,20 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
   final String shopAddress = "College Road, Pakistan Hardware, Vahowa";
   final TextEditingController _searchCtrl = TextEditingController();
 
-  List<ToolProduct> _currentTools = List.from(fallbackTools);
+  final List<ToolProduct> _currentTools = List.from(fallbackTools);
   bool _isLoadingOnline = false;
 
-  // Live Online Price & Product Update Endpoint
-  final String _onlinePricesUrl =
-      "https://raw.githubusercontent.com/adilsultanshah786-svg/pakistan-hardware/main/products.json";
+  // Online prices integration is temporarily disabled. Use Tareeqa 2 if needed.
+  // We will enable this again with correct configuration later.
 
   @override
   void initState() {
     super.initState();
-    _fetchLiveOnlinePrices();
+    // Disabled fetching online prices for now to allow immediate fix.
+    // _fetchLiveOnlinePrices();
   }
 
-  Future<void> _fetchLiveOnlinePrices() async {
-    setState(() => _isLoadingOnline = true);
-    try {
-      final response = await http.get(Uri.parse(_onlinePricesUrl)).timeout(const Duration(seconds: 4));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final List<ToolProduct> loaded = data.map((item) => ToolProduct.fromJson(item)).toList();
-        if (loaded.isNotEmpty) {
-          setState(() {
-            _currentTools = loaded;
-          });
-        }
-      }
-    } catch (_) {
-      // Agar internet na ho ya file na milay to fallback tools pe chalay ga
-    } finally {
-      if (mounted) setState(() => _isLoadingOnline = false);
-    }
-  }
+  // Future<void> _fetchLiveOnlinePrices() async { ... } // Temporarily commented out
 
   void _launchWhatsApp([String message = ""]) async {
     final defaultMsg = message.isNotEmpty
@@ -287,13 +255,6 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: _isLoadingOnline
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD32F2F)))
-                : const Icon(Icons.sync, color: Colors.black87, size: 20),
-            onPressed: _fetchLiveOnlinePrices,
-            tooltip: "Update Live Prices",
-          ),
           Container(
             margin: const EdgeInsets.only(right: 14),
             decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10)),
@@ -301,349 +262,345 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
           )
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchLiveOnlinePrices,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Functional Search Bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Icon(Icons.search, color: Colors.black54, size: 20),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtrl,
-                          onSubmitted: (value) {
-                            if (value.trim().isNotEmpty) {
-                              _openProductsPage(searchQuery: value.trim());
-                            }
-                          },
-                          decoration: const InputDecoration(
-                            hintText: "Search total, ingco, wadfow, tools...",
-                            hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                            elevation: 0,
-                            minimumSize: const Size(40, 36),
-                          ),
-                          onPressed: () {
-                            if (_searchCtrl.text.trim().isNotEmpty) {
-                              _openProductsPage(searchQuery: _searchCtrl.text.trim());
-                            }
-                          },
-                          child: const Text("GO", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        ),
-                      )
-                    ],
-                  ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Functional Search Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-              ),
-
-              // Hero Banner (Solid Dark Design - No white screen bug)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF991B1B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                child: Row(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Icon(Icons.search, color: Colors.black54, size: 20),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "PAKISTAN HARDWARE • VAHOWA",
-                            style: TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                            child: Column(
-                              children: [
-                                Text("${_currentTools.length}+", style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFD32F2F), fontSize: 12)),
-                                const Text("PRODUCTS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 7, color: Colors.black87)),
-                              ],
-                            ),
-                          ),
-                        ],
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onSubmitted: (value) {
+                          if (value.trim().isNotEmpty) {
+                            _openProductsPage(searchQuery: value.trim());
+                          }
+                        },
+                        decoration: const InputDecoration(
+                          hintText: "Search total, ingco, wadfow, tools...",
+                          hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "BUILD WITH\nTHE BEST TOOLS",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24, height: 1.15),
-                      ),
-                      const SizedBox(height: 14),
-                      ElevatedButton.icon(
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF97316),
+                          backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          elevation: 0,
+                          minimumSize: const Size(40, 36),
                         ),
-                        onPressed: () => _launchWhatsApp("Assalam-o-Alaikum! Mujhe Pakistan Tools se order karna hai."),
-                        icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-                        label: const Text("ORDER ON WHATSAPP", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-
-              // Trust Badges
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _trustItem(Icons.check_circle_outline, "100% Original"),
-                      _trustItem(Icons.local_shipping_outlined, "Fast Delivery"),
-                      _trustItem(Icons.verified_user_outlined, "Live Prices Sync"),
-                    ],
-                  ),
-                ),
-              ),
-
-              // SHOP BY BRAND (Clickable to show all brand tools)
-              _sectionHeader("SHOP BY BRAND"),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _brandCard("INGCO", "${_currentTools.where((t) => t.brand == 'INGCO').length} items", const Color(0xFFE53935), () {
-                        _openProductsPage(filterBrand: "INGCO");
-                      }),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _brandCard("WADFOW", "${_currentTools.where((t) => t.brand == 'WADFOW').length} items", const Color(0xFFF59E0B), () {
-                        _openProductsPage(filterBrand: "WADFOW");
-                      }),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _brandCard("TOTAL", "${_currentTools.where((t) => t.brand == 'TOTAL').length} items", const Color(0xFF0288D1), () {
-                        _openProductsPage(filterBrand: "TOTAL");
-                      }),
-                    ),
+                        onPressed: () {
+                          if (_searchCtrl.text.trim().isNotEmpty) {
+                            _openProductsPage(searchQuery: _searchCtrl.text.trim());
+                          }
+                        },
+                        child: const Text("GO", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    )
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 14),
-
-              // CATEGORIES Section
-              _sectionHeader("CATEGORIES"),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _categoryChip("Power Tools", Icons.bolt, () => _openProductsPage(searchQuery: "Power Tools")),
-                    const SizedBox(width: 8),
-                    _categoryChip("Hand Tools", Icons.build, () => _openProductsPage(searchQuery: "Hand Tools")),
-                    const SizedBox(width: 8),
-                    _categoryChip("Cordless", Icons.battery_charging_full, () => _openProductsPage(searchQuery: "Cordless")),
+            // Hero Banner (Solid Dark Design - No white screen bug)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF111827), Color(0xFF1F2937), Color(0xFF991B1B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // NEW ARRIVALS Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(width: 4, height: 18, color: const Color(0xFFD32F2F)),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text("NEW ARRIVALS", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
-                            Text("Auto updated products & rates", style: TextStyle(color: Colors.grey, fontSize: 10)),
-                          ],
+                        const Text(
+                          "PAKISTAN HARDWARE • VAHOWA",
+                          style: TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                          child: Column(
+                            children: [
+                              Text("${_currentTools.length}+", style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFD32F2F), fontSize: 12)),
+                              const Text("PRODUCTS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 7, color: Colors.black87)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "BUILD WITH\nTHE BEST TOOLS",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24, height: 1.15),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF97316),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      onPressed: () => _launchWhatsApp("Assalam-o-Alaikum! Mujhe Pakistan Tools se order karna hai."),
+                      icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+                      label: const Text("ORDER ON WHATSAPP", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                    )
+                  ],
+                ),
+              ),
+            ),
+
+            // Trust Badges
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _trustItem(Icons.check_circle_outline, "100% Original"),
+                    _trustItem(Icons.local_shipping_outlined, "Fast Delivery"),
+                    _trustItem(Icons.verified_user_outlined, "Trusted"),
+                  ],
+                ),
+              ),
+            ),
+
+            // SHOP BY BRAND (Clickable to show all brand tools)
+            _sectionHeader("SHOP BY BRAND"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _brandCard("INGCO", "${_currentTools.where((t) => t.brand == 'INGCO').length} items", const Color(0xFFE53935), () {
+                      _openProductsPage(filterBrand: "INGCO");
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _brandCard("WADFOW", "${_currentTools.where((t) => t.brand == 'WADFOW').length} items", const Color(0xFFF59E0B), () {
+                      _openProductsPage(filterBrand: "WADFOW");
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _brandCard("TOTAL", "${_currentTools.where((t) => t.brand == 'TOTAL').length} items", const Color(0xFF0288D1), () {
+                      _openProductsPage(filterBrand: "TOTAL");
+                    }),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // CATEGORIES Section
+            _sectionHeader("CATEGORIES"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _categoryChip("Power Tools", Icons.bolt, () => _openProductsPage(searchQuery: "Power Tools")),
+                  const SizedBox(width: 8),
+                  _categoryChip("Hand Tools", Icons.build, () => _openProductsPage(searchQuery: "Hand Tools")),
+                  const SizedBox(width: 8),
+                  _categoryChip("Cordless", Icons.battery_charging_full, () => _openProductsPage(searchQuery: "Cordless")),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // NEW ARRIVALS Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(width: 4, height: 18, color: const Color(0xFFD32F2F)),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("NEW ARRIVALS", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                          Text("Real Tools & Prices", style: TextStyle(color: Colors.grey, fontSize: 10)),
+                        ],
+                      )
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () => _openProductsPage(),
+                    child: const Text("See All ›", style: TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Real Products Horizontal Carousel
+            SizedBox(
+              height: 250,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _currentTools.take(6).length,
+                itemBuilder: (context, idx) {
+                  final tool = _currentTools[idx];
+                  return Container(
+                    width: 170,
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          child: Image.network(
+                            tool.imageUrl,
+                            height: 110,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(height: 110, color: Colors.grey.shade200, child: const Icon(Icons.hardware)),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(tool.brand, style: const TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.w900, fontSize: 10)),
+                              Text(tool.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, height: 1.1)),
+                              const SizedBox(height: 4),
+                              Text("Rs. ${tool.price}", style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.green, fontSize: 13)),
+                              const SizedBox(height: 6),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 26,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF25D366),
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.zero,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                  onPressed: () => _launchWhatsApp("Assalam-o-Alaikum! Mujhe '${tool.title}' order karna hai."),
+                                  child: const Text("ORDER", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
+                                ),
+                              )
+                            ],
+                          ),
                         )
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () => _openProductsPage(),
-                      child: const Text("See All ›", style: TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.bold, fontSize: 12)),
+                  );
+                },
+              ),
+            ),
+
+            // VISIT OUR SHOP (Dark Box)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("VISIT OUR SHOP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Color(0xFFD32F2F), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(shopAddress, style: const TextStyle(color: Colors.white70, fontSize: 11))),
+                      ],
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.call, color: Color(0xFFD32F2F), size: 16),
+                        const SizedBox(width: 8),
+                        Text("+$whatsappPhone", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => _launchWhatsApp(),
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: const Text("WHATSAPP PE ORDER KAREIN", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                      ),
+                    )
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 10),
-
-              // Real Products Horizontal Carousel
-              SizedBox(
-                height: 250,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _currentTools.take(6).length,
-                  itemBuilder: (context, idx) {
-                    final tool = _currentTools[idx];
-                    return Container(
-                      width: 170,
-                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                            child: Image.network(
-                              tool.imageUrl,
-                              height: 110,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(height: 110, color: Colors.grey.shade200, child: const Icon(Icons.hardware)),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(tool.brand, style: const TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.w900, fontSize: 10)),
-                                Text(tool.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, height: 1.1)),
-                                const SizedBox(height: 4),
-                                Text("Rs. ${tool.price}", style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.green, fontSize: 13)),
-                                const SizedBox(height: 6),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 26,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF25D366),
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.zero,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                    ),
-                                    onPressed: () => _launchWhatsApp("Assalam-o-Alaikum! Mujhe '${tool.title}' order karna hai."),
-                                    child: const Text("ORDER", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
-                                  ),
-                                )
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // VISIT OUR SHOP (Dark Box)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("VISIT OUR SHOP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: Color(0xFFD32F2F), size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(shopAddress, style: const TextStyle(color: Colors.white70, fontSize: 11))),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.call, color: Color(0xFFD32F2F), size: 16),
-                          const SizedBox(width: 8),
-                          Text("+$whatsappPhone", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          onPressed: () => _launchWhatsApp(),
-                          icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                          label: const Text("WHATSAPP PE ORDER KAREIN", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 80),
-            ],
-          ),
+            const SizedBox(height: 80),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
