@@ -14,23 +14,25 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - name: Repair Missing Android Files
+        run: |
+          flutter create --platforms=android .
+          flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build Android APK
+        run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PakistanTools-Release-APK
+          name: PakistanTools-APK
           path: build/app/outputs/flutter-apk/app-release.apk
