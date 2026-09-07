@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -14,14 +13,13 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
-          channel: 'stable'
+          channel: stable
           cache: false
 
       - name: Get Dependencies
@@ -34,6 +32,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
           name: PakistanTools-APK
           path: build/app/outputs/flutter-apk/app-release.apk
