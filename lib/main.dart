@@ -15,7 +15,6 @@ class PakistanToolsApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        fontFamily: 'Roboto',
         useMaterial3: true,
       ),
       home: const ToolsHomeScreen(),
@@ -137,7 +136,7 @@ class _ToolsHomeScreenState extends State<ToolsHomeScreen> {
         elevation: 0,
         backgroundColor: const Color(0xFF0F172A),
         title: Column(
-          crossAxisAlignment: CrossBorderCrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(storeName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Colors.white)),
             Text(shopAddress, style: const TextStyle(fontSize: 10, color: Colors.white70)),
@@ -225,7 +224,7 @@ class _ToolsHomeScreenState extends State<ToolsHomeScreen> {
                           border: Border.all(color: Colors.grey.shade200),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossBorderCrossAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               height: 120,
@@ -236,7 +235,7 @@ class _ToolsHomeScreenState extends State<ToolsHomeScreen> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
-                                crossAxisAlignment: CrossBorderCrossAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     item.brand.toUpperCase(),
@@ -312,7 +311,7 @@ class _ToolsHomeScreenState extends State<ToolsHomeScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossBorderCrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(storeName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
             const Divider(),
