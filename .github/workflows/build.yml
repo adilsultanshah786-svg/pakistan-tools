@@ -10,30 +10,40 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter Stable
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
           channel: 'stable'
-          cache: false
 
-      - name: Configure Android Project
+      - name: Build Clean Android Release
         run: |
-          flutter config --no-analytics
-          flutter create --platforms=android --org com.pakistantools .
-          flutter pub get
+          # 1. Clean workspace setup
+          mkdir -p /tmp/clean_app
+          cd /tmp/clean_app
+          flutter create --org com.pakistantools app
+          cd app
 
-      - name: Compile APK
-        run: flutter build apk --release --no-tree-shake-icons
+          # 2. Add dependencies
+          flutter pub add http url_launcher
+
+          # 3. Copy our main.dart UI code
+          cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
+
+          # 4. Build the final APK
+          flutter build apk --release --no-tree-shake-icons
+
+          # 5. Move APK to workspace
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/PakistanTools.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: output/PakistanTools.apk
