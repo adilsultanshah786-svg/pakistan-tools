@@ -1,39 +1,538 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(const PakistanToolsApp());
 }
 
-// Product Model
-class ToolProduct {
-  final String id;
-  final String title;
-  final String brand; // INGCO, WADFOW, TOTAL
-  final String category;
-  final int price;
-  final IconData icon;
-  final String specs;
+class PakistanToolsApp extends StatelessWidget {
+  const PakistanToolsApp({super.key});
 
-  const ToolProduct({
-    required this.id,
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Pakistan Tools',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+        primarySwatch: Colors.red,
+      ),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class ToolItem {
+  final String title;
+  final String brand;
+  final int price;
+  final String imgUrl;
+
+  ToolItem({
     required this.title,
     required this.brand,
-    required this.category,
     required this.price,
-    required this.icon,
-    required this.specs,
+    required this.imgUrl,
   });
 }
 
-// Catalog with Branded Icons
-final List<ToolProduct> allTools = [
-  // --- WADFOW PRODUCTS ---
-  const ToolProduct(
-    id: "W1",
-    title: "WADFOW Angle Grinder 710W (WAG35762)",
-    brand: "WADFOW",
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final String shopPhone = "+923451333385";
+  final String waNumber = "923451333385";
+  final String shopAddress = "College Road, Pakistan Tools, Vahowa";
+
+  final List<ToolItem> allProducts = [
+    ToolItem(
+      title: "TOTAL 20V Cordless Lithium-Ion Drill (TDLI20024)",
+      brand: "TOTAL",
+      price: 14500,
+      imgUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500",
+    ),
+    ToolItem(
+      title: "INGCO 750W Angle Grinder 115mm (AG750282)",
+      brand: "INGCO",
+      price: 7800,
+      imgUrl: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=500",
+    ),
+    ToolItem(
+      title: "WADFOW Claw Hammer 450g Heavy Duty",
+      brand: "WADFOW",
+      price: 1350,
+      imgUrl: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500",
+    ),
+    ToolItem(
+      title: "TOTAL Rotary Hammer SDS Plus 800W",
+      brand: "TOTAL",
+      price: 19500,
+      imgUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=500",
+    ),
+    ToolItem(
+      title: "INGCO Brushless Impact Driver 20V",
+      brand: "INGCO",
+      price: 21500,
+      imgUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500",
+    ),
+    ToolItem(
+      title: "WADFOW Precision Screwdriver Set 24 Pcs",
+      brand: "WADFOW",
+      price: 2200,
+      imgUrl: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500",
+    ),
+  ];
+
+  List<ToolItem> displayProducts = [];
+  List<ToolItem> searchResults = [];
+  final TextEditingController searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    displayProducts = List.from(allProducts);
+  }
+
+  void showContactDialog(String title, String detail, String actionType) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text(detail, style: const TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("OK", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void filterBrand(String brand) {
+    setState(() {
+      if (brand == "ALL") {
+        displayProducts = List.from(allProducts);
+      } else {
+        displayProducts = allProducts.where((p) => p.brand.toUpperCase() == brand.toUpperCase()).toList();
+      }
+    });
+  }
+
+  void onSearch(String text) {
+    final q = text.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        searchResults = [];
+      } else {
+        searchResults = allProducts
+            .where((p) => p.title.toLowerCase().contains(q) || p.brand.toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE41E26),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text("PT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text("PAKISTAN TOOLS", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text("Premium Hardware - Vahowa", style: TextStyle(color: Colors.grey, fontSize: 10)),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.black),
+            onPressed: () => showContactDialog("Call Us", "Phone: $shopPhone", "CALL"),
+          )
+        ],
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+
+                // 1. Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: searchCtrl,
+                            onChanged: onSearch,
+                            decoration: const InputDecoration(
+                              hintText: "Search tools, brands, items...",
+                              border: InputBorder.none,
+                              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (searchCtrl.text.isNotEmpty) {
+                              setState(() {
+                                displayProducts = List.from(searchResults);
+                                searchResults = [];
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          child: const Text("GO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Search Suggestions Dropdown
+                if (searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
+                    ),
+                    child: Column(
+                      children: searchResults.map((item) => ListTile(
+                        dense: true,
+                        title: Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        subtitle: Text("Rs. ${item.price} (${item.brand})", style: const TextStyle(color: Colors.blue, fontSize: 11)),
+                        onTap: () {
+                          searchCtrl.text = item.title;
+                          setState(() {
+                            displayProducts = [item];
+                            searchResults = [];
+                          });
+                        },
+                      )).toList(),
+                    ),
+                  ),
+
+                // 2. Hero Banner
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.all(16),
+                  height: 160,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1B1B1B), Color(0xFFC91414)],
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                          child: const Text("500+ PRODUCTS", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.red)),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("PAKISTAN HARDWARE - VAHOWA", style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 4),
+                          Text("BUILD WITH\nTHE BEST TOOLS", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1)),
+                        ],
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onPressed: () => showContactDialog("WhatsApp Order", "Order karne k liye contact karein:\nWhatsApp: +$waNumber", "WA"),
+                        icon: const Icon(Icons.chat, size: 14, color: Colors.white),
+                        label: const Text("ORDER ON WHATSAPP", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      )
+                    ],
+                  ),
+                ),
+
+                // 3. Trust Badges
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: const [
+                      Text("✔ 100% Original", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                      Text("⚡ Fast Delivery", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                      Text("🛡 Trusted", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4. Shop By Brand
+                _buildHeader("SHOP BY BRAND"),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _brandBtn("INGCO", const Color(0xFFC91414), "215 items"),
+                      const SizedBox(width: 8),
+                      _brandBtn("WADFOW", const Color(0xFFF39200), "125 items"),
+                      const SizedBox(width: 8),
+                      _brandBtn("TOTAL", const Color(0xFF00758F), "135 items"),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 5. New Arrivals Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildHeader("NEW ARRIVALS"),
+                      TextButton(
+                        onPressed: () => filterBrand("ALL"),
+                        child: const Text("See All ›", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                      )
+                    ],
+                  ),
+                ),
+
+                // 6. Products Grid
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: displayProducts.length,
+                  itemBuilder: (context, idx) {
+                    final item = displayProducts[idx];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                              child: Image.network(
+                                item.imgUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.build, color: Colors.grey)),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.brand, style: const TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.bold)),
+                                Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text("Rs. ${item.price}", style: const TextStyle(color: Color(0xFF00758F), fontWeight: FontWeight.w900, fontSize: 12)),
+                                const SizedBox(height: 6),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 28,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF25D366),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                    onPressed: () => showContactDialog(
+                                      "Order Now",
+                                      "Tool: ${item.title}\nPrice: Rs. ${item.price}\n\nOrder WhatsApp par karein:\n+$waNumber",
+                                      "ORDER",
+                                    ),
+                                    child: const Text("Order Now", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                )
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 18),
+
+                // 7. Visit Shop Card
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF121212),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("VISIT OUR SHOP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () => showContactDialog("Shop Location", shopAddress, "LOC"),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(shopAddress, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: () => showContactDialog("Call Us", "Phone: $shopPhone", "CALL"),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.phone, color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Text(shopPhone, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.chat, color: Colors.white, size: 16),
+                          label: const Text("WHATSAPP PE ORDER KAREIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          onPressed: () => showContactDialog("WhatsApp Order", "Direct WhatsApp number:\n+$waNumber", "WA"),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 90),
+              ],
+            ),
+          ),
+
+          // Floating WhatsApp Action Button
+          Positioned(
+            bottom: 20,
+            right: 16,
+            child: FloatingActionButton(
+              backgroundColor: const Color(0xFF25D366),
+              onPressed: () => showContactDialog("WhatsApp Order", "Contact number:\n+$waNumber", "WA"),
+              child: const Icon(Icons.chat, color: Colors.white),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String title) {
+    return Row(
+      children: [
+        Container(width: 4, height: 16, color: Colors.red),
+        const SizedBox(width: 6),
+        Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _brandBtn(String brand, Color color, String count) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => filterBrand(brand),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text(brand, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text(count, style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    const Text("BROWSE →", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
     category: "Power Tools",
     price: 6850,
     icon: Icons.rotate_right_rounded,
