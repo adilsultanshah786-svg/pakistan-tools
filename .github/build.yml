@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -21,15 +21,14 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Get Packages
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Compile APK
+      - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
           path: build/app/outputs/flutter-apk/app-release.apk
-
