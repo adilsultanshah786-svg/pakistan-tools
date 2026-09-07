@@ -33,6 +33,5 @@ jobs:
         with:
           name: PakistanTools-APK
           path: build/app/outputs/flutter-apk/app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
           name: PakistanTools-APK
           path: build/app/outputs/flutter-apk/app-release.apk
