@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(const PakistanToolsApp());
@@ -21,18 +24,576 @@ class PakistanToolsApp extends StatelessWidget {
   }
 }
 
-class ToolItem {
+class Product {
   final String title;
   final String brand;
-  final int price;
-  final String imgUrl;
+  final double price;
+  final String imageUrl;
 
-  ToolItem({
+  Product({
     required this.title,
     required this.brand,
     required this.price,
-    required this.imgUrl,
+    required this.imageUrl,
   });
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final String phone = "+923451333385";
+  final String whatsapp = "923451333385";
+  final String address = "College Road, Pakistan Tools, Vahowa";
+
+  List<Product> allProducts = [];
+  List<Product> filteredProducts = [];
+  List<Product> searchResults = [];
+  bool isLoading = true;
+  String selectedBrand = "ALL";
+  final TextEditingController searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLiveWebProducts();
+  }
+
+  // Internet se dono websites ka data fetch karne ka function
+  Future<void> fetchLiveWebProducts() async {
+    List<Product> loaded = [];
+
+    // 1. TotalTool.pk se live products fetch karein
+    try {
+      final res = await http.get(
+        Uri.parse("https://totaltool.pk/products.json?limit=50"),
+        headers: {"User-Agent": "Mozilla/5.0"},
+      );
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final List items = data['products'] ?? [];
+        for (var item in items) {
+          final title = item['title'] ?? '';
+          final variants = item['variants'] as List?;
+          double price = 0.0;
+          if (variants != null && variants.isNotEmpty) {
+            price = double.tryParse(variants[0]['price'].toString()) ?? 0.0;
+          }
+          final images = item['images'] as List?;
+          String img = "";
+          if (images != null && images.isNotEmpty) {
+            img = images[0]['src'] ?? "";
+          }
+
+          loaded.add(Product(
+            title: title,
+            brand: "TOTAL",
+            price: price,
+            imageUrl: img,
+          ));
+        }
+      }
+    } catch (_) {}
+
+    // Fallback Initial Stock agar network slow ho
+    if (loaded.isEmpty) {
+      loaded = [
+        Product(
+          title: "TOTAL 20V Lithium-Ion Drill (TDLI20024)",
+          brand: "TOTAL",
+          price: 14500,
+          imageUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500",
+        ),
+        Product(
+          title: "INGCO 750W Angle Grinder 115mm (AG750282)",
+          brand: "INGCO",
+          price: 7800,
+          imageUrl: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=500",
+        ),
+        Product(
+          title: "WADFOW Claw Hammer 450g Heavy Duty",
+          brand: "WADFOW",
+          price: 1350,
+          imageUrl: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500",
+        ),
+        Product(
+          title: "TOTAL Rotary Hammer SDS Plus 800W",
+          brand: "TOTAL",
+          price: 19500,
+          imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=500",
+        ),
+        Product(
+          title: "INGCO Brushless Impact Driver 20V",
+          brand: "INGCO",
+          price: 21500,
+          imageUrl: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500",
+        ),
+        Product(
+          title: "WADFOW Precision Screwdriver Set 24 Pcs",
+          brand: "WADFOW",
+          price: 2200,
+          imageUrl: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500",
+        ),
+      ];
+    }
+
+    setState(() {
+      allProducts = loaded;
+      filteredProducts = loaded;
+      isLoading = false;
+    });
+  }
+
+  void openWhatsApp([String? customMsg]) async {
+    final msg = customMsg ?? "Assalam o Alaikum! Mujhe tools ke baare mein maloomat chahiye.";
+    final uri = Uri.parse("https://wa.me/$whatsapp?text=${Uri.encodeComponent(msg)}");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void callPhone() async {
+    final uri = Uri.parse("tel:$phone");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  void openMapLocation() async {
+    final uri = Uri.parse("https://maps.google.com/?q=${Uri.encodeComponent(address)}");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void filterBrand(String brand) {
+    setState(() {
+      selectedBrand = brand;
+      if (brand == "ALL") {
+        filteredProducts = List.from(allProducts);
+      } else {
+        filteredProducts = allProducts.where((p) => p.brand.toUpperCase() == brand.toUpperCase()).toList();
+      }
+    });
+  }
+
+  void onSearch(String text) {
+    final q = text.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        searchResults = [];
+      } else {
+        searchResults = allProducts
+            .where((p) => p.title.toLowerCase().contains(q) || p.brand.toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ingcoCount = allProducts.where((p) => p.brand == "INGCO").length;
+    final wadfowCount = allProducts.where((p) => p.brand == "WADFOW").length;
+    final totalCount = allProducts.where((p) => p.brand == "TOTAL").length;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE41E26),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text("PT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text("PAKISTAN TOOLS", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text("Premium Hardware - Vahowa", style: TextStyle(color: Colors.grey, fontSize: 10)),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.black),
+            onPressed: callPhone,
+          )
+        ],
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+
+                // 1. Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: searchCtrl,
+                            onChanged: onSearch,
+                            decoration: const InputDecoration(
+                              hintText: "Search tools, brands, items...",
+                              border: InputBorder.none,
+                              hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (searchCtrl.text.isNotEmpty) {
+                              setState(() {
+                                filteredProducts = List.from(searchResults);
+                                searchResults = [];
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          child: const Text("GO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Live Suggestions
+                if (searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8)],
+                    ),
+                    child: Column(
+                      children: searchResults.take(6).map((item) => ListTile(
+                        dense: true,
+                        title: Text(item.title, maxLines: 1, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        subtitle: Text("Rs. ${item.price.toInt()} (${item.brand})", style: const TextStyle(color: Colors.blue, fontSize: 11)),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 12),
+                        onTap: () {
+                          searchCtrl.text = item.title;
+                          setState(() {
+                            filteredProducts = [item];
+                            searchResults = [];
+                          });
+                        },
+                      )).toList(),
+                    ),
+                  ),
+
+                // 2. Hero Banner
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.all(16),
+                  height: 165,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1B1B1B), Color(0xFFC91414)],
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                          child: Text("${allProducts.length}+ PRODUCTS", style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.red)),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("PAKISTAN HARDWARE - VAHOWA", style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 4),
+                          Text("BUILD WITH\nTHE BEST TOOLS", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1)),
+                        ],
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onPressed: () => openWhatsApp("Assalam o Alaikum! Mujhe tools order karne hain."),
+                        icon: const Icon(Icons.chat, size: 14, color: Colors.white),
+                        label: const Text("ORDER ON WHATSAPP", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      )
+                    ],
+                  ),
+                ),
+
+                // 3. Trust Badges
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: const [
+                      Text("✔ 100% Original", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                      Text("⚡ Fast Delivery", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                      Text("🛡 Trusted", style: TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4. Shop By Brand
+                _buildHeader("SHOP BY BRAND"),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _brandBtn("INGCO", const Color(0xFFC91414), "$ingcoCount items"),
+                      const SizedBox(width: 8),
+                      _brandBtn("WADFOW", const Color(0xFFF39200), "$wadfowCount items"),
+                      const SizedBox(width: 8),
+                      _brandBtn("TOTAL", const Color(0xFF00758F), "$totalCount items"),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 5. Products Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildHeader("NEW ARRIVALS"),
+                      TextButton(
+                        onPressed: () => filterBrand("ALL"),
+                        child: const Text("See All ›", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                      )
+                    ],
+                  ),
+                ),
+
+                // 6. Products Grid
+                isLoading
+                    ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, idx) {
+                          final item = filteredProducts[idx];
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                                    child: Image.network(
+                                      item.imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.build, color: Colors.grey)),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(item.brand, style: const TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.bold)),
+                                      Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 4),
+                                      Text("Rs. ${item.price.toInt()}", style: const TextStyle(color: Color(0xFF00758F), fontWeight: FontWeight.w900, fontSize: 12)),
+                                      const SizedBox(height: 6),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 28,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFF25D366),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                            padding: EdgeInsets.zero,
+                                          ),
+                                          onPressed: () => openWhatsApp("Assalam o Alaikum, mujhe khareedna hai:\n${item.title}\nPrice: Rs. ${item.price.toInt()}"),
+                                          child: const Text("Order Now", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
+                const SizedBox(height: 18),
+
+                // 7. Visit Shop Card
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF121212),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("VISIT OUR SHOP", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: openMapLocation,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(address, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: callPhone,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.phone, color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Text(phone, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.chat, color: Colors.white, size: 16),
+                          label: const Text("WHATSAPP PE ORDER KAREIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          onPressed: () => openWhatsApp(),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 90),
+              ],
+            ),
+          ),
+
+          // Floating WhatsApp Action Button
+          Positioned(
+            bottom: 20,
+            right: 16,
+            child: FloatingActionButton(
+              backgroundColor: const Color(0xFF25D366),
+              onPressed: () => openWhatsApp(),
+              child: const Icon(Icons.chat, color: Colors.white),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String title) {
+    return Row(
+      children: [
+        Container(width: 4, height: 16, color: Colors.red),
+        const SizedBox(width: 6),
+        Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _brandBtn(String brand, Color color, String count) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => filterBrand(brand),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text(brand, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text(count, style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    const Text("BROWSE →", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class HomeScreen extends StatefulWidget {
