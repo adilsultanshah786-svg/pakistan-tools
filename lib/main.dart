@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const PakistanToolsApp());
 }
 
@@ -16,24 +17,913 @@ class PakistanToolsApp extends StatelessWidget {
       title: 'Pakistan Tools',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        primarySwatch: Colors.red,
+        fontFamily: 'sans-serif',
+        scaffoldBackgroundColor: const Color(0xFFF6F7F9),
+        primaryColor: const Color(0xFFE41E26),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE41E26)),
       ),
-      home: const HomeScreen(),
+      home: const MainHardwareStoreScreen(),
     );
   }
 }
 
-class Product {
+class ProductItem {
+  final String id;
   final String title;
   final String brand;
   final double price;
   final String imageUrl;
+  final String sourceWebsite;
 
-  Product({
+  ProductItem({
+    required this.id,
     required this.title,
     required this.brand,
     required this.price,
+    required this.imageUrl,
+    required this.sourceWebsite,
+  });
+}
+
+class MainHardwareStoreScreen extends StatefulWidget {
+  const MainHardwareStoreScreen({super.key});
+
+  @override
+  State<MainHardwareStoreScreen> createState() => _MainHardwareStoreScreenState();
+}
+
+class _MainHardwareStoreScreenState extends State<MainHardwareStoreScreen> {
+  final String officialPhone = "+923451333385";
+  final String officialWhatsApp = "923451333385";
+  final String shopAddress = "College Road, Pakistan Tools, Vahowa";
+
+  List<ProductItem> masterInventory = [];
+  List<ProductItem> displayedProducts = [];
+  List<ProductItem> autoSuggestions = [];
+  bool isSyncing = true;
+  String activeFilterBrand = "ALL";
+  final TextEditingController searchInputController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    initializeCatalog();
+  }
+
+  // Pre-loaded original stock catalog from totaltool.pk & houseoftools.com.pk
+  List<ProductItem> getBaselineCatalog() {
+    return [
+      // TOTAL Tools (totaltool.pk)
+      ProductItem(
+        id: "TOT-01",
+        title: "TOTAL 20V Cordless Lithium-Ion Drill (TDLI20024)",
+        brand: "TOTAL",
+        price: 14800,
+        imageUrl: "https://totaltool.pk/cdn/shop/files/TDLI20024_1.jpg?v=1690000000",
+        sourceWebsite: "totaltool.pk",
+      ),
+      ProductItem(
+        id: "TOT-02",
+        title: "TOTAL 1010W SDS-Plus Rotary Hammer Drill",
+        brand: "TOTAL",
+        price: 21500,
+        imageUrl: "https://totaltool.pk/cdn/shop/files/TH308266_1.jpg?v=1690000000",
+        sourceWebsite: "totaltool.pk",
+      ),
+      ProductItem(
+        id: "TOT-03",
+        title: "TOTAL 750W Angle Grinder 115mm (TG10711556)",
+        brand: "TOTAL",
+        price: 8900,
+        imageUrl: "https://totaltool.pk/cdn/shop/files/TG10711556_1.jpg?v=1690000000",
+        sourceWebsite: "totaltool.pk",
+      ),
+      ProductItem(
+        id: "TOT-04",
+        title: "TOTAL Industrial Inverter MMA Welding Machine 200A",
+        brand: "TOTAL",
+        price: 34500,
+        imageUrl: "https://totaltool.pk/cdn/shop/files/TW22002_1.jpg?v=1690000000",
+        sourceWebsite: "totaltool.pk",
+      ),
+      ProductItem(
+        id: "TOT-05",
+        title: "TOTAL 1400W Circular Saw 185mm (TS1141856)",
+        brand: "TOTAL",
+        price: 18900,
+        imageUrl: "https://totaltool.pk/cdn/shop/files/TS1141856_1.jpg?v=1690000000",
+        sourceWebsite: "totaltool.pk",
+      ),
+
+      // INGCO Tools (houseoftools.com.pk)
+      ProductItem(
+        id: "ING-01",
+        title: "INGCO 20V Lithium-Ion Brushless Impact Wrench",
+        brand: "INGCO",
+        price: 23500,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/05/CIWLI2001.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "ING-02",
+        title: "INGCO 850W Heavy Duty Impact Drill (ID8508)",
+        brand: "INGCO",
+        price: 9800,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/05/ID8508.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "ING-03",
+        title: "INGCO Industrial Bench Grinder 150W 150mm",
+        brand: "INGCO",
+        price: 12500,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/05/BG61502.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "ING-04",
+        title: "INGCO Cordless Air Blower 20V Fast Clean",
+        brand: "INGCO",
+        price: 11200,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/05/CABLI20018.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+
+      // WADFOW Tools (houseoftools.com.pk)
+      ProductItem(
+        id: "WAD-01",
+        title: "WADFOW Claw Hammer 450g Fiberglass Handle",
+        brand: "WADFOW",
+        price: 1450,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/08/WADFOW-Hammer.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "WAD-02",
+        title: "WADFOW 12-Piece Combination Spanner Wrench Set",
+        brand: "WADFOW",
+        price: 3800,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/08/WADFOW-Spanner.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "WAD-03",
+        title: "WADFOW Heavy Duty Water Pump Plier 10 Inch",
+        brand: "WADFOW",
+        price: 1650,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/08/WADFOW-Plier.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+      ProductItem(
+        id: "WAD-04",
+        title: "WADFOW Cordless Drill 12V with Battery & Charger",
+        brand: "WADFOW",
+        price: 8900,
+        imageUrl: "https://houseoftools.com.pk/wp-content/uploads/2023/08/WADFOW-Drill.jpg",
+        sourceWebsite: "houseoftools.com.pk",
+      ),
+    ];
+  }
+
+  Future<void> initializeCatalog() async {
+    List<ProductItem> items = getBaselineCatalog();
+
+    // Live Web Scrape/Sync from Shopify TotalTool Endpoint
+    try {
+      final response = await http
+          .get(
+            Uri.parse("https://totaltool.pk/products.json?limit=50"),
+            headers: {"Accept": "application/json"},
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final parsed = json.decode(response.body);
+        final List webProducts = parsed['products'] ?? [];
+
+        for (var p in webProducts) {
+          final String title = p['title'] ?? '';
+          final variants = p['variants'] as List?;
+          double price = 0.0;
+          if (variants != null && variants.isNotEmpty) {
+            price = double.tryParse(variants[0]['price'].toString()) ?? 0.0;
+          }
+          final images = p['images'] as List?;
+          String img = "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500";
+          if (images != null && images.isNotEmpty && images[0]['src'] != null) {
+            img = images[0]['src'];
+          }
+
+          if (title.isNotEmpty && price > 0) {
+            items.insert(
+              0,
+              ProductItem(
+                id: "LIVE-${p['id']}",
+                title: title,
+                brand: "TOTAL",
+                price: price,
+                imageUrl: img,
+                sourceWebsite: "totaltool.pk",
+              ),
+            );
+          }
+        }
+      }
+    } catch (_) {
+      // Offline fallback remains active
+    }
+
+    if (mounted) {
+      setState(() {
+        masterInventory = items;
+        displayedProducts = items;
+        isSyncing = false;
+      });
+    }
+  }
+
+  void dispatchWhatsApp({String? specificText}) async {
+    final message = specificText ??
+        "Assalam o Alaikum! Mujhe Pakistan Tools Vahowa se products ki maloomat leni hain.";
+    final uri = Uri.parse("https://wa.me/$officialWhatsApp?text=${Uri.encodeComponent(message)}");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void openDialer() async {
+    final uri = Uri.parse("tel:$officialPhone");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  void launchGoogleMap() async {
+    final uri = Uri.parse(
+        "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(shopAddress)}");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void setBrandFilter(String brand) {
+    setState(() {
+      activeFilterBrand = brand;
+      if (brand == "ALL") {
+        displayedProducts = List.from(masterInventory);
+      } else {
+        displayedProducts = masterInventory
+            .where((item) => item.brand.toUpperCase() == brand.toUpperCase())
+            .toList();
+      }
+    });
+  }
+
+  void executeSearch(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        autoSuggestions = [];
+      } else {
+        autoSuggestions = masterInventory
+            .where((item) =>
+                item.title.toLowerCase().contains(q) ||
+                item.brand.toLowerCase().contains(q))
+            .take(5)
+            .toList();
+      }
+    });
+  }
+
+  void submitSearch(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      autoSuggestions = [];
+      if (q.isEmpty) {
+        displayedProducts = List.from(masterInventory);
+      } else {
+        displayedProducts = masterInventory
+            .where((item) =>
+                item.title.toLowerCase().contains(q) ||
+                item.brand.toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalBrandCount = masterInventory.where((p) => p.brand == "TOTAL").length;
+    final ingcoBrandCount = masterInventory.where((p) => p.brand == "INGCO").length;
+    final wadfowBrandCount = masterInventory.where((p) => p.brand == "WADFOW").length;
+
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 1,
+        backgroundColor: Colors.white,
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE41E26),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                "PT",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  "PAKISTAN TOOLS",
+                  style: TextStyle(
+                    color: Color(0xFF1B1B1B),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  "Premium Hardware - Vahowa",
+                  style: TextStyle(
+                    color: Color(0xFF757575),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: openDialer,
+            icon: const Icon(Icons.phone_in_talk, color: Color(0xFFE41E26)),
+            tooltip: "Call Shop",
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            color: const Color(0xFFE41E26),
+            onRefresh: initializeCatalog,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+
+                  // Search Bar Component
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.search, color: Colors.grey, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: searchInputController,
+                              onChanged: executeSearch,
+                              onSubmitted: submitSearch,
+                              decoration: const InputDecoration(
+                                hintText: "Search tools, brands, items...",
+                                hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => submitSearch(searchInputController.text),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                            child: const Text(
+                              "GO",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Live Dropdown Suggestions
+                  if (autoSuggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10)
+                        ],
+                      ),
+                      child: Column(
+                        children: autoSuggestions
+                            .map(
+                              (item) => ListTile(
+                                dense: true,
+                                title: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                ),
+                                subtitle: Text(
+                                  "${item.brand} • Rs. ${item.price.toInt()}",
+                                  style: const TextStyle(color: Color(0xFF00758F), fontSize: 11),
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios, size: 12),
+                                onTap: () {
+                                  searchInputController.text = item.title;
+                                  submitSearch(item.title);
+                                },
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // Hero Industrial Banner
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E1E1E), Color(0xFFB71C1C)],
+                        begin: Alignment.bottomLeft,
+                        end: Alignment.topRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "PAKISTAN HARDWARE - VAHOWA",
+                              style: TextStyle(
+                                color: Color(0xFFFFD54F),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                "${masterInventory.length}+ PRODUCTS",
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFB71C1C),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "BUILD WITH\nTHE BEST TOOLS",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          onPressed: () => dispatchWhatsApp(
+                              specificText: "Assalam o Alaikum! Mujhe tools order karne hain."),
+                          icon: const Icon(Icons.chat, size: 16, color: Colors.white),
+                          label: const Text(
+                            "ORDER ON WHATSAPP",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Trust Badges
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: const [
+                        Text("✔ 100% Original",
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        Text("⚡ Fast Delivery",
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        Text("🛡 Trusted Shop",
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Shop By Brand Section
+                  _renderSectionHeader("SHOP BY BRAND"),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        _renderBrandCard("INGCO", const Color(0xFFC91414), "$ingcoBrandCount items"),
+                        const SizedBox(width: 8),
+                        _renderBrandCard("WADFOW", const Color(0xFFF39200), "$wadfowBrandCount items"),
+                        const SizedBox(width: 8),
+                        _renderBrandCard("TOTAL", const Color(0xFF00758F), "$totalBrandCount items"),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // Products Grid Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _renderSectionHeader("NEW ARRIVALS"),
+                        if (activeFilterBrand != "ALL")
+                          TextButton(
+                            onPressed: () => setBrandFilter("ALL"),
+                            child: const Text("Show All", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          )
+                      ],
+                    ),
+                  ),
+
+                  // 2-Column Product Grid
+                  if (isSyncing)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: CircularProgressIndicator(color: Color(0xFFE41E26)),
+                      ),
+                    )
+                  else
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.68,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: displayedProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = displayedProducts[index];
+                        return _renderProductTile(product);
+                      },
+                    ),
+
+                  const SizedBox(height: 20),
+
+                  // Visit Our Shop Section (Footer Card)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF141414),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "VISIT OUR SHOP",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        InkWell(
+                          onTap: launchGoogleMap,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on, color: Color(0xFFE41E26), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  shopAddress,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        InkWell(
+                          onTap: openDialer,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.phone, color: Color(0xFFE41E26), size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                officialPhone,
+                                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 42,
+                          child: ElevatedButton.icon(
+                            onPressed: () => dispatchWhatsApp(),
+                            icon: const Icon(Icons.chat, color: Colors.white, size: 18),
+                            label: const Text(
+                              "WHATSAPP PE ORDER KAREIN",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF25D366),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 90),
+                ],
+              ),
+            ),
+          ),
+
+          // Floating WhatsApp Button
+          Positioned(
+            bottom: 24,
+            right: 18,
+            child: FloatingActionButton(
+              backgroundColor: const Color(0xFF25D366),
+              onPressed: () => dispatchWhatsApp(),
+              child: const Icon(Icons.chat, color: Colors.white, size: 28),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _renderSectionHeader(String heading) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(width: 4, height: 16, color: const Color(0xFFE41E26)),
+          const SizedBox(width: 8),
+          Text(
+            heading,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1B1B1B),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _renderBrandCard(String brandTitle, Color themeColor, String countText) {
+    final bool isCurrent = activeFilterBrand.toUpperCase() == brandTitle.toUpperCase();
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setBrandFilter(isCurrent ? "ALL" : brandTitle),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isCurrent ? themeColor : Colors.grey.shade200,
+              width: isCurrent ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: themeColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                child: Column(
+                  children: [
+                    Text(
+                      brandTitle,
+                      style: TextStyle(
+                        color: themeColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      countText,
+                      style: const TextStyle(fontSize: 9, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "BROWSE →",
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _renderProductTile(ProductItem product) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
+              child: Image.network(
+                product.imageUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFFF0F0F0),
+                  child: const Center(
+                    child: Icon(Icons.build, color: Colors.grey, size: 36),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.brand,
+                  style: TextStyle(
+                    color: product.brand == "INGCO"
+                        ? const Color(0xFFC91414)
+                        : (product.brand == "WADFOW"
+                            ? const Color(0xFFF39200)
+                            : const Color(0xFF00758F)),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  product.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Rs. ${product.price.toInt()}",
+                  style: const TextStyle(
+                    color: Color(0xFF00758F),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 28,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      padding: EdgeInsets.zero,
+                    ),
+                    onPressed: () {
+                      final orderMsg =
+                          "Assalam o Alaikum! Mujhe yeh tool order karna hai:\n*Product:* ${product.title}\n*Brand:* ${product.brand}\n*Price:* Rs. ${product.price.toInt()}";
+                      dispatchWhatsApp(specificText: orderMsg);
+                    },
+                    child: const Text(
+                      "Order Now",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
     required this.imageUrl,
   });
 }
