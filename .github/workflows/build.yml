@@ -19,43 +19,32 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
           channel: 'stable'
-          cache: false
 
-      - name: Build Clean Android App
+      - name: Create and Build Android APK
         run: |
           set -e
-          # 1. Clean build directory
-          mkdir -p /tmp/pakistan_tools
-          cd /tmp/pakistan_tools
-          
-          # 2. Fresh Android Scaffold
+          # 1. Fresh clean workspace
+          cd $RUNNER_TEMP
           flutter config --no-analytics
-          flutter create --org com.pakistantools pakistantools_app
-          cd pakistantools_app
-          
-          # 3. Add packages
-          flutter pub add http url_launcher
-          
-          # 4. Copy custom UI code
-          cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
-          
-          # 5. Fix Android minSdk to 21 for url_launcher support
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
-          
-          # 6. Accept all licenses
-          yes | flutter doctor --android-licenses || true
-          
-          # 7. Compile APK
-          flutter build apk --release --no-tree-shake-icons
-          
-          # 8. Export APK
-          mkdir -p $GITHUB_WORKSPACE/final_apk
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/final_apk/PakistanTools.apk
+          flutter create --org com.pakistantools --platforms=android myapp
+          cd myapp
 
-      - name: Upload APK
+          # 2. Add dependencies
+          flutter pub add http url_launcher
+
+          # 3. Copy our main.dart UI
+          cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
+
+          # 4. Compile Release APK
+          flutter build apk --release --no-tree-shake-icons
+
+          # 5. Move APK to repository workspace
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/PakistanTools.apk
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
-          path: final_apk/PakistanTools.apk
+          path: output/PakistanTools.apk
