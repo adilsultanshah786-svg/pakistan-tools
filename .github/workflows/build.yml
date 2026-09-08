@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -19,23 +19,43 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.19.6'
           channel: 'stable'
+          cache: false
 
-      - name: Clean Build Pipeline
+      - name: Build Clean Android App
         run: |
-          mkdir -p /tmp/builder
-          cd /tmp/builder
+          set -e
+          # 1. Clean build directory
+          mkdir -p /tmp/pakistan_tools
+          cd /tmp/pakistan_tools
+          
+          # 2. Fresh Android Scaffold
           flutter config --no-analytics
           flutter create --org com.pakistantools pakistantools_app
           cd pakistantools_app
+          
+          # 3. Add packages
           flutter pub add http url_launcher
+          
+          # 4. Copy custom UI code
           cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
+          
+          # 5. Fix Android minSdk to 21 for url_launcher support
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
+          
+          # 6. Accept all licenses
+          yes | flutter doctor --android-licenses || true
+          
+          # 7. Compile APK
           flutter build apk --release --no-tree-shake-icons
-          mkdir -p $GITHUB_WORKSPACE/build_output
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/build_output/PakistanTools.apk
+          
+          # 8. Export APK
+          mkdir -p $GITHUB_WORKSPACE/final_apk
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/final_apk/PakistanTools.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
-          path: build_output/PakistanTools.apk
+          path: final_apk/PakistanTools.apk
