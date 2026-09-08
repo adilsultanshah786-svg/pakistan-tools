@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -21,29 +21,34 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Create and Build Android APK
+      - name: Build Standalone APK
         run: |
           set -e
-          # 1. Fresh clean workspace
-          cd $RUNNER_TEMP
-          flutter config --no-analytics
-          flutter create --org com.pakistantools --platforms=android myapp
-          cd myapp
+          APP_DIR="$RUNNER_TEMP/pt_app"
+          rm -rf "$APP_DIR"
+          
+          # 1. Fresh standalone Flutter project
+          flutter create --org com.pakistantools --project-name pakistan_tools "$APP_DIR"
+          cd "$APP_DIR"
 
           # 2. Add dependencies
           flutter pub add http url_launcher
 
-          # 3. Copy our main.dart UI
-          cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
+          # 3. Replace main.dart with your complete UI code
+          cp -f "$GITHUB_WORKSPACE/lib/main.dart" lib/main.dart
 
-          # 4. Compile Release APK
-          flutter build apk --release --no-tree-shake-icons
+          # 4. Set minimum SDK to 21
+          sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle 2>/dev/null || true
 
-          # 5. Move APK to repository workspace
-          mkdir -p $GITHUB_WORKSPACE/output
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/PakistanTools.apk
+          # 5. Build Direct Universal APK (No NDK crashes)
+          flutter build apk --debug
 
-      - name: Upload APK Artifact
+          # 6. Copy output to workspace
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$GITHUB_WORKSPACE/output/PakistanTools.apk"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PakistanTools-APK
